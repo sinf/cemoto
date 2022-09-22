@@ -49,17 +49,21 @@ void boot_anim() {
 #define CMD_DECR 2
 #define CMD_READ 3
 
+// addresses
 #define WIPER0 0
 #define WIPER1 1
+#define TCON 2
+#define STATUS 5
 
 void spi_send(uint16_t data, uint8_t bits)
 {
+	data <<= 16 - bits;
 	PORTB &= ~CS;
 	spi_delay2();
 
 	for(uint8_t i=0; i<bits; ++i) {
 
-		uint8_t data_bit = data >> bits - 1 - i & 1;
+		uint8_t data_bit = data << i >> 15;
 
 		PORTB = PORTB & ~(SCK | SDI);
 		PORTB |= data_bit;
@@ -82,6 +86,7 @@ void set_wiper(int16_t value) {
 	if (value > WIPER_MAX) { value = WIPER_MAX; }
 	wiper_pos = value;
 
+	spi_send(CMD_16(TCON, CMD_WRITE, 0x1FF), 16); // just in case ?
 	spi_send(CMD_16(WIPER0, CMD_WRITE, value), 16);
 }
 
@@ -130,6 +135,7 @@ int main(void)
 		while (rtc_counter < tick_interval) { }
 		cli();
 		if (rtc_counter < tick_interval) { continue; } // second check incase the while loop misread the counter
+		rtc_counter -= tick_interval;
 		do_tick();
 	}
 
