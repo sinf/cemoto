@@ -1,8 +1,9 @@
 
-.PHONY: clean flash dump_fuses
+.PHONY: clean flash dump_fuses test
 
 SRC=main.c
-HEADERS=
+HEADERS=speed.c
+TESTSRC=test.c
 CFLAGS=-DF_CPU=9600000UL -Os -std=c99 -Wall -Wno-parentheses
 
 PART=t13a
@@ -17,6 +18,12 @@ $(HEX): $(ELF) $(OUTDIR)
 
 $(ELF): $(SRC) $(HEADERS) $(OUTDIR)
 	avr-gcc -mmcu=$(MCU) $(CFLAGS) -o $@ $(SRC)
+
+$(OUTDIR)/test.elf: $(TESTSRC) $(HEADERS) $(OUTDIR)
+	gcc $(CFLAGS) -o $@ $(TESTSRC)
+
+test: $(OUTDIR)/test.elf
+	./$(OUTDIR)/test.elf
 
 $(OUTDIR):
 	@if [ ! -d $(OUTDIR) ]; then mkdir -pv $@; fi

@@ -1,5 +1,5 @@
 #ifndef F_CPU
-#define F_CPU 96000000UL
+#define F_CPU 9600000UL
 #endif
 
 #include <stdint.h>
@@ -11,27 +11,35 @@
 #include <util/delay.h>
 #include <util/delay_basic.h>
 
-#define WIPER_MAX 128
-
-int16_t wiper_pos = WIPER_MAX/2;
-
-#define RTC_PRESCALER 64
-#define ONE_SECOND (rtc_t)((F_CPU/RTC_PRESCALER/256)) // = 586
-typedef int16_t rtc_t;
-volatile rtc_t rtc_counter = 0;
-ISR(TIM0_OVF_vect) { rtc_counter += 1; }
-
 // digital potentiometer pins
 // max spi freq = 10 MHz
 #define SDI (1u<<0)
 #define SCK (1u<<1)
 #define CS (1u<<2)
-#define spi_delay() _delay_loop_1(100)
-#define spi_delay2() _delay_loop_1(255)
+#define spi_delay() _delay_loop_1(10)
+#define spi_delay2() _delay_loop_1(30)
 
 #define HALL (1u<<3)
 #define LED (1u<<4)
 
+#include "speed.c"
+
+int16_t wiper_pos = WIPER_MAX;
+volatile pulse_t pulse_counter = 0; // should increment at rate < 1000 Hz
+volatile rtc_t rtc_counter = 0;
+
+ISR(TIM0_OVF_vect) {
+	rtc_counter += 1;
+}
+
+ISR(PCINT0_vect) {
+	if (pulse_counter != PULSE_MAX)
+		pulse_counter += 1;
+}
+
+#if 0
+#define boot_anim()
+#else
 void boot_anim() {
 	for(int i=0; i<5; ++i) {
 		PORTB ^= LED;
@@ -39,6 +47,7 @@ void boot_anim() {
 	}
 	PORTB = PORTB & (~LED);
 }
+#endif
 
 #define CMD_8(addr,cmd,data) ((addr)<<4 | (cmd)<<2 & 12 | (data) & 3)
 #define CMD_16(addr,cmd,data) ((uint16_t) CMD_8((addr),(cmd),(uint16_t)(data) >> 8) << 8 | (uint8_t)(data) & 0xFFu)
@@ -86,17 +95,31 @@ void set_wiper(int16_t value) {
 	if (value > WIPER_MAX) { value = WIPER_MAX; }
 	wiper_pos = value;
 
-	spi_send(CMD_16(TCON, CMD_WRITE, 0x1FF), 16); // just in case ?
+#if 1
+	if (value > 0) {
+		PORTB |= LED;
+	} else {
+		PORTB &= ~LED;
+	}
+#endif
+
+	spi_send(CMD_16(TCON, CMD_WRITE, 0x1FF), 16); // just in case a random bit flip corrupts TCON
 	spi_send(CMD_16(WIPER0, CMD_WRITE, value), 16);
 }
 
-void do_tick() {
-	static int16_t d = 1;
-	set_wiper(wiper_pos + d);
-	if (wiper_pos == 0 || wiper_pos == WIPER_MAX) {
-		d = -d;
+#if 0
+void test_wiper() {
+	int16_t w = 0;
+	int16_t d = 1;
+	for(;;) {
+		set_wiper(w);
+		w += d;
+		if (w == 0 || w == WIPER_MAX) {
+			d = -d;
+		}
 	}
 }
+#endif
 
 int main(void)
 {
@@ -110,33 +133,57 @@ int main(void)
 	 * PORTB 1-bits for inputs enables pull up
 	 */
 	DDRB = LED | SCK | CS | SDI;
-	PORTB = HALL | CS;
+	PORTB = CS | HALL; // pull ups
 	
 	/* setup timer interrupt */
 	TCCR0A = 0; // dont toggle hardware pin, normal mode
 	TCCR0B = 1<<CS00 | 1<<CS01; // prescaler = 64
 	TIMSK0 = 1<<TOIE0; // enable overflow interrupt for timer 0
 
+	/* setup pin change interrupt */
+	PCMSK = 1<<PCINT3;
+	GIMSK = 1<<PCIE;
+
 	boot_anim();
-	PORTB |= LED;
+	//PORTB |= LED;
 	
 	set_wiper(wiper_pos);
 
-	if (0) for(;;) {
-		set_wiper(10);
-		_delay_ms(100);
-		set_wiper(240);
-		_delay_ms(100);
-	}
+	rtc_t rtc_acc[N_ACC] = {0};
+	pulse_t pulse_acc[N_ACC] = {0};
+	uint8_t i_acc = 0;
 
-	const rtc_t tick_interval = 10;
+	sei();
+
 	for(;;) {
-		sei();
-		while (rtc_counter < tick_interval) { }
+		rtc_t rtc_copy;
+		pulse_t pulse_copy;
+
+		while (rtc_counter < TICK_INTERVAL) { }
 		cli();
-		if (rtc_counter < tick_interval) { continue; } // second check incase the while loop misread the counter
-		rtc_counter -= tick_interval;
-		do_tick();
+		rtc_copy = rtc_counter;
+		pulse_copy = pulse_counter;
+		rtc_counter = 0;
+		pulse_counter = 0;
+		sei();
+
+		rtc_acc[i_acc] = rtc_copy;
+		pulse_acc[i_acc] = pulse_copy;
+		if (++i_acc == N_ACC) {
+			i_acc = 0;
+		}
+
+		uint16_t t=0, p=0;
+		for(int j=0; j<N_ACC; ++j) {
+			t += rtc_acc[j];
+			p += pulse_acc[j];
+		}
+
+		//t <<= 1; // adjust because counted all pulses twice
+		p >>= 1;
+
+		int16_t w = calc_speed(p, t);
+		set_wiper(w);
 	}
 
 	return 0;
