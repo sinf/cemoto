@@ -21,9 +21,9 @@ prog.elf: $(SRC) $(HEADERS)
 
 flash: .flash_timestamp ;
 
-# int osc 9.6 MHz, startup= 14CK + 0ms
+# int osc 9.6 MHz, startup= 14CK + 0ms, brown-out=4.3v
 set_fuses:
-	$(DUDE) -U lfuse:w:0x72:m -U hfuse:w:0xFF:m -B 1000
+	$(DUDE) -U lfuse:w:0x72:m -U hfuse:w:0xF9:m -B 1000
 
 # int osc 9.6 MHz, startup= 14CK + 64ms
 #	$(DUDE) -U lfuse:w:0x7a:m -U hfuse:w:0xFF:m -B 1000
@@ -36,6 +36,6 @@ dump_fuses:
 clean:
 	rm -f prog.hex prog.elf lfuse hfuse
 
-size: $(ELF)
+size: prog.elf
 	objdump --wide -h $<
 

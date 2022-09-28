@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 //#include <avr/cpufunc.h>
 #include <util/delay.h>
 #include <util/delay_basic.h>
@@ -12,19 +13,12 @@ uint8_t lcd_mem[4] = {0};
 
 uint8_t lcd_num(uint8_t i)
 {
-	static const uint8_t num[10] = {
-		SEG(1,1,1,1,1,1,0), //0
-		SEG(0,1,1,0,0,0,0), //1
-		SEG(1,1,0,1,1,0,1), //2
-		SEG(1,1,1,1,0,0,1), //3
-		SEG(0,1,1,0,0,1,1), //4
-		SEG(1,0,1,1,0,1,1), //5
-		SEG(1,0,1,1,1,1,1), //6
-		SEG(1,1,1,0,0,0,0), //7
-		SEG(1,1,1,1,1,1,1), //8
-		SEG(1,1,1,1,0,1,1), //9
+	static const uint8_t num[10] PROGMEM = {
+		SEG_0, SEG_1, SEG_2, SEG_3, SEG_4,
+		SEG_5, SEG_6, SEG_7, SEG_8, SEG_9,
 	};
-	return i < 10 ? num[i] : 0;
+	return pgm_read_byte(&num[i]);
+	//return i < 10 ? pgm_read_byte(&num[i]) : 0;
 }
 
 void lcd_delay(void) {

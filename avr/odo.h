@@ -7,8 +7,8 @@
 
 #define PI 3.141592653589793
 
-#define RTC_PRESCALER 1024
-#define RTC_FREQ (F_CPU/RTC_PRESCALER)
+//#define RTC_PRESCALER 64
+#define RTC_FREQ 9375 //(F_CPU/RTC_PRESCALER/256)
 
 #define HALL_PIN 3
 #define HALL (1u<<HALL_PIN)
@@ -21,13 +21,11 @@
 #define PULSES_PER_REV 23
 #define SENSOR_FREQ(veh_speed_kmh) ((veh_speed_kmh)/3.6/WHEEL_R/(2*PI)*PULSES_PER_REV)
 
-extern volatile uint32_t rtc_counter;
-extern volatile uint32_t pulse_counter;
-extern volatile uint8_t button_press;
-
-extern uint16_t trip_m;
+extern uint16_t trip_100m;
 extern uint16_t uptime_sec;
 
+void odo_load(void);
+void odo_save(void);
 void odo_tick(void);
 
 #endif

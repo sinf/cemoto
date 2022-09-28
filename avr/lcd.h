@@ -45,6 +45,18 @@
  * ab=10: 4 commons option
  */
 
+// digits
+#define SEG_0 SEG(1,1,1,1,1,1,0)
+#define SEG_1 SEG(0,1,1,0,0,0,0)
+#define SEG_2 SEG(1,1,0,1,1,0,1)
+#define SEG_3 SEG(1,1,1,1,0,0,1)
+#define SEG_4 SEG(0,1,1,0,0,1,1)
+#define SEG_5 SEG(1,0,1,1,0,1,1)
+#define SEG_6 SEG(1,0,1,1,1,1,1)
+#define SEG_7 SEG(1,1,1,0,0,0,0)
+#define SEG_8 SEG(1,1,1,1,1,1,1)
+#define SEG_9 SEG(1,1,1,1,0,1,1)
+
 #define SEGDP (1<<3)
 #define LCD_VFLIP 0
 
