@@ -1,4 +1,2 @@
-*.elf
-*.hex
-.flash_timestamp
-
+*.swp
+*.swo
