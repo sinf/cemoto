@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "cemoto")(type "KiCad")(uri "${KIPRJMOD}/cemoto.kicad_sym")(options "")(descr ""))
+)
